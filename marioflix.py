@@ -1,5 +1,5 @@
-# Marioflix - film-app med eget kodlås och auto-uppdatering. (v4)
-# Koderna ligger i koder.txt (en kod per rad) - ändra där när du vill.
+# Marioflix - film-app med eget kodlås och auto-uppdatering. (v5)
+# Koderna ligger pa Render-servern (marioflix-codes.onrender.com) + koder.txt som backup.
 # Uppdateringar hämtas från GitHub: mariomardoo-dev/Marioflix
 import base64
 import json
@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import threading
+import urllib.parse
 import urllib.request
 
 import webview
@@ -15,8 +16,9 @@ URL = "https://cinejoy.to/"
 BASE = os.path.dirname(os.path.abspath(__file__))
 ICON = os.path.join(BASE, "marioflix.ico")
 CODES_FILE = os.path.join(BASE, "koder.txt")
+CODES_SERVER = "https://marioflix-codes.onrender.com/check?code="
 
-VERSION = 4
+VERSION = 5
 # GitHub API = alltid farskt (ingen cache). Publikt repo funkar utan nyckel.
 UPDATE_URL = "https://api.github.com/repos/mariomardoo-dev/Marioflix/contents/"
 
@@ -188,7 +190,19 @@ class Api:
         self.current_code = None
 
     def check_code(self, code):
-        ok = code.strip().lower() in load_codes()
+        c = code.strip().lower()
+        # 1) Server-koderna (Render) - anda koderna galls overallt
+        try:
+            with urllib.request.urlopen(CODES_SERVER + urllib.parse.quote(c), timeout=60) as r:
+                ok = bool(json.loads(r.read().decode()).get("ok", False))
+            if ok:
+                self.logged_in = True
+                self.current_code = code.strip()
+            return ok
+        except Exception:
+            pass
+        # 2) Fallback: lokal koder.txt om servern inte svarar
+        ok = c in load_codes()
         if ok:
             self.logged_in = True
             self.current_code = code.strip()
