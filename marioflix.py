@@ -16,7 +16,7 @@ ICON = os.path.join(BASE, "marioflix.ico")
 CODES_FILE = os.path.join(BASE, "koder.txt")
 
 VERSION = 2
-UPDATE_URL = "https://raw.githubusercontent.com/mariomardoo-dev/Marioflix/main/"
+UPDATE_URL = "https://cdn.jsdelivr.net/gh/mariomardoo-dev/Marioflix@main/"
 
 CLEANUP_JS = r"""
 (function () {
