@@ -1,4 +1,4 @@
-# Marioflix - film-app med eget kodlås och auto-uppdatering.
+# Marioflix - film-app med eget kodlås och auto-uppdatering. (v3)
 # Koderna ligger i koder.txt (en kod per rad) - ändra där när du vill.
 # Uppdateringar hämtas från GitHub: mariomardoo-dev/Marioflix
 import json
