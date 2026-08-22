@@ -17,8 +17,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 ICON = os.path.join(BASE, "marioflix.ico")
 CODES_FILE = os.path.join(BASE, "koder.txt")
 CODES_SERVER = "https://marioflix-codes.onrender.com/check?code="
+DEVICE_FILE = os.path.join(BASE, "device_id.txt")
 
-VERSION = 5
+VERSION = 6
 # GitHub API = alltid farskt (ingen cache). Publikt repo funkar utan nyckel.
 UPDATE_URL = "https://api.github.com/repos/mariomardoo-dev/Marioflix/contents/"
 
@@ -152,14 +153,19 @@ LOGIN_HTML = """<!doctype html>
     function tryLogin() {
       var code = document.getElementById('code').value.trim();
       if (!code) return;
-      document.getElementById('err').textContent = 'Kollar...';
-      pywebview.api.check_code(code).then(function (ok) {
-        if (ok) {
-          document.getElementById('err').style.color = '#6bff8b';
-          document.getElementById('err').textContent = 'Rätt kod! Öppnar filmerna...';
+      var err = document.getElementById('err');
+      err.style.color = '#888';
+      err.textContent = 'Kollar...';
+      pywebview.api.check_code(code).then(function (status) {
+        if (status === 'ok') {
+          err.style.color = '#6bff8b';
+          err.textContent = 'Rätt kod! Öppnar filmerna...';
+        } else if (status === 'upptagen') {
+          err.style.color = '#ff6b6b';
+          err.textContent = 'Koden används redan på en annan enhet.';
         } else {
-          document.getElementById('err').style.color = '#ff6b6b';
-          document.getElementById('err').textContent = 'Fel kod, försök igen.';
+          err.style.color = '#ff6b6b';
+          err.textContent = 'Fel kod, försök igen.';
         }
       });
     }
@@ -184,6 +190,18 @@ def load_codes():
         return {line.strip().lower() for line in f if line.strip() and not line.strip().startswith("#")}
 
 
+def device_id():
+    """Hemligt enhets-id - lagras i device_id.txt sa en kod bara funkar pa EN dator."""
+    if os.path.exists(DEVICE_FILE):
+        with open(DEVICE_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    import uuid
+    new_id = str(uuid.uuid4())
+    with open(DEVICE_FILE, "w", encoding="utf-8") as f:
+        f.write(new_id)
+    return new_id
+
+
 class Api:
     def __init__(self):
         self.logged_in = False
@@ -191,22 +209,28 @@ class Api:
 
     def check_code(self, code):
         c = code.strip().lower()
-        # 1) Server-koderna (Render) - anda koderna galls overallt
+        # 1) Server-koderna (Render) - med enhetslås (1 kod = 1 enhet)
         try:
-            with urllib.request.urlopen(CODES_SERVER + urllib.parse.quote(c), timeout=60) as r:
-                ok = bool(json.loads(r.read().decode()).get("ok", False))
-            if ok:
+            with urllib.request.urlopen(
+                CODES_SERVER + urllib.parse.quote(c) + "&device=" + urllib.parse.quote(device_id()),
+                timeout=60,
+            ) as r:
+                data = json.loads(r.read().decode())
+            if data.get("ok"):
                 self.logged_in = True
                 self.current_code = code.strip()
-            return ok
+                return "ok"
+            if data.get("reason") == "upptagen":
+                return "upptagen"
+            return "fel"
         except Exception:
             pass
         # 2) Fallback: lokal koder.txt om servern inte svarar
-        ok = c in load_codes()
-        if ok:
+        if c in load_codes():
             self.logged_in = True
             self.current_code = code.strip()
-        return ok
+            return "ok"
+        return "fel"
 
     def logout(self):
         self.logged_in = False
