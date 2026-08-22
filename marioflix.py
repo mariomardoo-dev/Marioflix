@@ -15,7 +15,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 ICON = os.path.join(BASE, "marioflix.ico")
 CODES_FILE = os.path.join(BASE, "koder.txt")
 
-VERSION = 1
+VERSION = 2
 UPDATE_URL = "https://raw.githubusercontent.com/mariomardoo-dev/Marioflix/main/"
 
 CLEANUP_JS = r"""
