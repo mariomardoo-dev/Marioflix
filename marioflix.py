@@ -1,6 +1,7 @@
-# Marioflix - film-app med eget kodlås och auto-uppdatering. (v3)
+# Marioflix - film-app med eget kodlås och auto-uppdatering. (v4)
 # Koderna ligger i koder.txt (en kod per rad) - ändra där när du vill.
 # Uppdateringar hämtas från GitHub: mariomardoo-dev/Marioflix
+import base64
 import json
 import os
 import subprocess
@@ -15,8 +16,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 ICON = os.path.join(BASE, "marioflix.ico")
 CODES_FILE = os.path.join(BASE, "koder.txt")
 
-VERSION = 2
-UPDATE_URL = "https://cdn.jsdelivr.net/gh/mariomardoo-dev/Marioflix@main/"
+VERSION = 4
+# GitHub API = alltid farskt (ingen cache). Publikt repo funkar utan nyckel.
+UPDATE_URL = "https://api.github.com/repos/mariomardoo-dev/Marioflix/contents/"
 
 CLEANUP_JS = r"""
 (function () {
@@ -241,6 +243,18 @@ def on_loaded(api):
         print("JS injection failed:", e)
 
 
+def fetch_gh(filename):
+    """Hamta en fil fran GitHub-repot via API (ingen cache). Returnerar text."""
+    url = UPDATE_URL + filename
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Marioflix", "Accept": "application/vnd.github+json"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    return base64.b64decode(data["content"]).decode("utf-8")
+
+
 def run_updater(window):
     """Kollar efter uppdateringar pa GitHub. Finns ny version -> ladda ner, byt fil, starta om."""
     def set_status(txt, color="#888"):
@@ -253,8 +267,7 @@ def run_updater(window):
             pass
 
     try:
-        with urllib.request.urlopen(UPDATE_URL + "version.txt", timeout=8) as r:
-            remote = int(r.read().decode().strip())
+        remote = int(fetch_gh("version.txt").strip())
     except Exception:
         set_status("")
         return
@@ -265,8 +278,7 @@ def run_updater(window):
 
     set_status("Ny version finns! Uppdaterar...", "#ffb347")
     try:
-        with urllib.request.urlopen(UPDATE_URL + "marioflix.py", timeout=30) as r:
-            new_code = r.read().decode("utf-8")
+        new_code = fetch_gh("marioflix.py")
         compile(new_code, "marioflix_new.py", "exec")  # validera att det ar riktig python
         script = os.path.join(BASE, "marioflix.py")
         new_path = os.path.join(BASE, "marioflix_new.py")
