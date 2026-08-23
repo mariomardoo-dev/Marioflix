@@ -19,7 +19,7 @@ CODES_FILE = os.path.join(BASE, "koder.txt")
 CODES_SERVER = "https://marioflix-codes.onrender.com/check?code="
 DEVICE_FILE = os.path.join(BASE, "device_id.txt")
 
-VERSION = 6
+VERSION = 7
 # GitHub API = alltid farskt (ingen cache). Publikt repo funkar utan nyckel.
 UPDATE_URL = "https://api.github.com/repos/mariomardoo-dev/Marioflix/contents/"
 
@@ -132,6 +132,9 @@ LOGIN_HTML = """<!doctype html>
   input { background:#1e1e28; border:1px solid #333; color:#fff; font-size:18px; padding:12px 16px;
           border-radius:10px; width:240px; text-align:center; outline:none; box-sizing:border-box; }
   input:focus { border-color:#e52020; }
+  .remember { margin-top:12px; font-size:13px; color:#aaa; display:flex; align-items:center;
+              justify-content:center; gap:7px; cursor:pointer; user-select:none; }
+  .remember input { width:auto; accent-color:#e52020; margin:0; }
   button { margin-top:14px; background:#e52020; color:#fff; border:0; font-size:16px; font-weight:600;
            padding:12px 32px; border-radius:999px; cursor:pointer; }
   button:hover { background:#ff2b2b; }
@@ -144,12 +147,22 @@ LOGIN_HTML = """<!doctype html>
     <h1><span class="play">Mario</span>flix</h1>
     <p class="sub">Ange din kod för att komma in</p>
     <input id="code" type="password" placeholder="Kod" autofocus>
+    <label class="remember"><input type="checkbox" id="remember"> Kom ihåg min kod</label>
     <br>
     <button id="btn">Logga in</button>
     <div class="err" id="err"></div>
     <div class="upd" id="upd"></div>
   </div>
   <script>
+    (function () {
+      // Fyll i sparad kod om "kom ihåg" var ikryssat
+      var saved = localStorage.getItem('mf_saved_code');
+      if (saved) {
+        document.getElementById('code').value = saved;
+        document.getElementById('remember').checked = true;
+      }
+    })();
+
     function tryLogin() {
       var code = document.getElementById('code').value.trim();
       if (!code) return;
@@ -158,6 +171,11 @@ LOGIN_HTML = """<!doctype html>
       err.textContent = 'Kollar...';
       pywebview.api.check_code(code).then(function (status) {
         if (status === 'ok') {
+          if (document.getElementById('remember').checked) {
+            localStorage.setItem('mf_saved_code', code);
+          } else {
+            localStorage.removeItem('mf_saved_code');
+          }
           err.style.color = '#6bff8b';
           err.textContent = 'Rätt kod! Öppnar filmerna...';
         } else if (status === 'upptagen') {
